@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context-4.1.xsd
+    http://www.springframework.org/schema/tx 
+    http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
+    http://www.springframework.org/schema/aop
+    http://www.springframework.org/schema/aop/spring-aop-4.1.xsd ">
+    
+    <!-- 引入JDBC属性文件 -->
+ 	<bean id="propertyConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location" value="classpath:jdbc.properties" />
+        <property name="ignoreUnresolvablePlaceholders" value="true" /> 
+    </bean>
+    
+    <!-- 配置c3p0连接池 -->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+    	<property name="driverClass" value="com.mysql.jdbc.Driver"/>
+    	<property name="jdbcUrl" value="${jdbc.jdbcUrl}"/>
+    	<property name="user" value="${jdbc.user}"/>
+    	<property name="password" value="${jdbc.password}"/>
+    </bean>
+    
+    <!-- 配置业务层类 -->
+    <bean id="accountService" class="com.whd.spring.tx.aspectj.service.impl.AccountServiceImpl">
+    	<property name="accountDao" ref="accountDao"/>
+    </bean>
+    
+    <!-- 配置数据访问层类 -->
+    <bean id="accountDao" class="com.whd.spring.tx.aspectj.dao.impl.AccountDaoImpl">
+    	<property name="dataSource" ref="dataSource"/>
+    </bean>
+    
+    <!-- 配置事务管理器 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    	<property name="dataSource" ref="dataSource"/>
+    </bean>
+    
+    <!-- AspectJ AOP配置 -->
+    <!-- 配置通知 -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+    	<tx:attributes>
+    		<!-- 
+    			属性配置
+    			 * propagation    :事务传播行为
+    			 * isolation      :事务隔离级别
+    			 * read-only      :是否只读
+    			 * timeout        :事务超时时间
+    			 * rollback-for   :回滚异常
+    			 * no-rollback-for:不回滚异常
+    		 -->
+    		<tx:method name="transferByAspectJ" propagation="REQUIRED" isolation="DEFAULT" read-only="false" timeout="-1"/>
+    	</tx:attributes>
+    </tx:advice>
+    
+    <!-- 织入 -->
+    <aop:config>
+    	<!-- 配置切点 -->
+    	<aop:pointcut expression="execution(* transferByAspectJ(..))" id="pointcut"/>
+    	<!-- 配置切面 -->
+    	<aop:advisor advice-ref="txAdvice" pointcut-ref="pointcut"/>
+    </aop:config>
+</beans>
